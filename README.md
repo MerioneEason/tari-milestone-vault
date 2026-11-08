@@ -2,6 +2,9 @@
 
 **An entry to the Tari November Build Contest (theme: MVP).**
 
+- **Code:** https://github.com/MerioneEason/tari-milestone-vault
+- **Live demo (simulated, no wallet needed):** https://merioneeason.github.io/tari-milestone-vault/demo/
+
 Freelance and small-service work has a trust problem at both ends: clients
 don't want to pay before the work exists, freelancers don't want to work
 without a guarantee of payment. Milestone Vault is the escrow middle ground,

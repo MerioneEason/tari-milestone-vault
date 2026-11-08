@@ -81,3 +81,10 @@ binary is a phase-2 optimisation item, not a correctness issue.
   no announcement post. Those need the user's approval per the contest prep
   plan, and the final pre-deadline rebuild against the then-latest toolchain
   is still owed (protocol-V1 version risk).
+
+
+## Publish record — 2026-11-08
+
+- Public repo created (empty, via GitHub web UI) and code pushed over SSH: https://github.com/MerioneEason/tari-milestone-vault (branch `main`, commit 4466074 + README link update).
+- GitHub Pages enabled from `main` / root. Demo verified live on 2026-11-08: `GET https://merioneeason.github.io/tari-milestone-vault/demo/` → HTTP 200, page contains the "SIMULATED DEMO" banner; repo page → HTTP 200.
+- Still outstanding: Tari L1 payout wallet generation, contest forum submission post, announcement post (Bluesky/Reddit/Medium/YouTube), optional Esmeralda testnet publish, and the final pre-deadline rebuild against the then-latest toolchain.
