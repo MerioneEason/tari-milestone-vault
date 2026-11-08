@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Milestone Vault — Simulated Demo</title>
+<style>
+  :root { --bg:#0f1115; --panel:#171a21; --panel2:#1e222c; --line:#2a2f3a; --txt:#e8eaf0; --dim:#9aa3b2; --accent:#ffb347; --green:#4ade80; --red:#f87171; --blue:#60a5fa; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background:var(--bg); color:var(--txt); }
+  header { padding: 20px 24px 8px; max-width: 1080px; margin: 0 auto; }
+  h1 { margin: 0 0 4px; font-size: 26px; }
+  .sub { color: var(--dim); margin: 0 0 14px; }
+  .sim-banner { background:#3a2b12; border:1px solid var(--accent); color:#ffd9a0; border-radius:10px; padding:12px 16px; font-size:15px; line-height:1.5; max-width:1080px; margin: 0 auto 16px; }
+  .sim-banner strong { color: var(--accent); }
+  main { max-width:1080px; margin:0 auto; padding: 0 24px 40px; display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+  @media (max-width: 860px){ main{ grid-template-columns: 1fr; } }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 18px; }
+  .card h2 { margin:0 0 10px; font-size:17px; }
+  .card h3 { margin:14px 0 6px; font-size:14px; color:var(--dim); text-transform:uppercase; letter-spacing:.06em; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  button { background:var(--panel2); color:var(--txt); border:1px solid var(--line); border-radius:8px; padding:8px 14px; cursor:pointer; font-size:14px; }
+  button:hover:not(:disabled){ border-color:var(--accent); }
+  button:disabled { opacity:.38; cursor:not-allowed; }
+  button.primary { background:#5a3d10; border-color:var(--accent); }
+  button.role-on { background:#274b73; border-color:var(--blue); }
+  select, input[type=text], input[type=number] { background:var(--panel2); color:var(--txt); border:1px solid var(--line); border-radius:8px; padding:7px 10px; font-size:14px; }
+  .bal { font-size:22px; font-weight:600; }
+  .dim { color:var(--dim); font-size:13px; }
+  table { width:100%; border-collapse: collapse; font-size:14px; }
+  th, td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); vertical-align: top; }
+  .chip { display:inline-block; padding:2px 9px; border-radius:999px; font-size:12px; border:1px solid var(--line); }
+  .st0 { color:#fbbf24; } .st1 { color:var(--blue); } .st2 { color:var(--green); } .st3 { color:var(--red); }
+  #log { font-family: ui-monospace, Menlo, Consolas, monospace; font-size:12.5px; line-height:1.65; white-space:pre-wrap; max-height:300px; overflow:auto; }
+  .why { font-size:12.5px; color:var(--dim); margin-top:4px; }
+  footer { max-width:1080px; margin:0 auto; padding:0 24px 30px; color:var(--dim); font-size:13px; line-height:1.6; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🔐 Milestone Vault</h1>
+  <p class="sub">Milestone-based escrow payments on Tari Ootle — lock the full payment up front, release it piece by piece as work is approved.</p>
+  <div class="sim-banner">
+    <strong>⚠ SIMULATED DEMO.</strong> This page is a browser-only simulation of the template's behaviour.
+    The Milestone Vault template is <strong>not published to mainnet</strong>, this demo connects to <strong>no wallet and no chain</strong>,
+    and no real funds move. It exists so reviewers can walk the exact flow the Rust template enforces on-chain
+    (the template itself is covered by in-process engine tests — see the repository README).
+  </div>
+</header>
+
+<main>
+  <section class="card">
+    <h2>1 · Set up the job</h2>
+    <p class="dim">The client defines the milestones and the timeout policy, then locks the full amount. Both are fixed at creation — on-chain, the component has no owner, so the rules can never be changed afterwards.</p>
+    <h3>Timeout policy (locked at creation)</h3>
+    <div class="row">
+      <select id="policy">
+        <option value="refund">Refund client — unapproved money returns to the client after the deadline</option>
+        <option value="auto">Auto-release if submitted — a milestone submitted in time is paid if the client stays silent past the deadline</option>
+      </select>
+    </div>
+    <p class="why">Why this choice matters: <em>refund</em> protects the client against non-delivery; <em>auto-release</em> protects the freelancer against a client who goes silent after the work is done. A milestone that was never submitted is refunded under <strong>both</strong> policies.</p>
+    <h3>Milestones</h3>
+    <table id="ms-setup">
+      <thead><tr><th>#</th><th>Description</th><th>Amount (tTARI)</th><th>Deadline (epoch)</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="row" style="margin-top:12px">
+      <button class="primary" id="btn-create">Create vault &amp; lock <span id="total-label"></span> tTARI</button>
+      <button id="btn-reset">Reset demo</button>
+    </div>
+    <h3>Chain clock (simulated epochs)</h3>
+    <div class="row">
+      <span>Current epoch: <strong id="epoch-label">0</strong></span>
+      <button id="btn-epoch1">+1 epoch</button>
+      <button id="btn-epoch-jump">Jump past all deadlines</button>
+    </div>
+    <p class="why">On-chain, deadlines are checked against <em>Consensus::current_epoch()</em>. Here you advance the clock by hand.</p>
+  </section>
+
+  <section class="card">
+    <h2>2 · Act as a party</h2>
+    <div class="row" style="margin-bottom:10px">
+      <button id="role-client">👤 Client view</button>
+      <button id="role-freelancer">🛠 Freelancer view</button>
+    </div>
+    <div class="row" style="gap:24px">
+      <div>Client balance<br><span class="bal" id="bal-client">1000</span> <span class="dim">tTARI</span></div>
+      <div>Freelancer balance<br><span class="bal" id="bal-freelancer">0</span> <span class="dim">tTARI</span></div>
+      <div>Locked in vault<br><span class="bal" id="bal-vault">0</span> <span class="dim">tTARI</span></div>
+    </div>
+    <h3>Milestones</h3>
+    <table>
+      <thead><tr><th>#</th><th>Milestone</th><th>Status</th><th>Action</th></tr></thead>
+      <tbody id="ms-body"></tbody>
+    </table>
+    <p class="why" id="role-hint"></p>
+    <h3>Event log (mirrors on-chain events)</h3>
+    <div id="log"></div>
+  </section>
+</main>
+
+<footer>
+  Milestone Vault is an entry to the Tari November Build Contest (MVP theme). Template: Rust / Tari Ootle
+  (<em>tari_template_lib</em>), with role-locked access rules — only the freelancer's key can submit, only the
+  client's key can approve, and timeout settlement follows the policy locked at creation.
+  Built by an AI agent. This demo page performs no network calls.
+</footer>
+
+<script>
+"use strict";
+// ---- Simulated state: mirrors the Rust template's state machine exactly ----
+const PENDING=0, SUBMITTED=1, RELEASED=2, REFUNDED=3;
+const STATUS = ["Pending","Submitted","Released","Refunded"];
+let state = null;
+
+const DEFAULT_MILESTONES = [
+  { description: "Design mockups approved direction", amount: 300, deadline: 5 },
+  { description: "Working prototype delivered",        amount: 400, deadline: 9 },
+  { description: "Final delivery & handover",          amount: 300, deadline: 13 },
+];
+
+let role = "client"; // "client" | "freelancer"
+
+function freshState(){
+  return {
+    created: false,
+    epoch: 0,
+    policy: document.getElementById("policy").value,
+    clientBalance: 1000,
+    freelancerBalance: 0,
+    vaultBalance: 0,
+    milestones: DEFAULT_MILESTONES.map(m => ({...m, status: PENDING, note: ""})),
+    log: [],
+  };
+}
+
+function logEvent(text){
+  state.log.push("epoch " + state.epoch + " · " + text);
+  render();
+}
+
+// ---- Actions: same guards as the template's methods ----
+function createVault(){
+  const total = state.milestones.reduce((s,m)=>s+m.amount,0);
+  if (state.clientBalance < total) { alert("Client balance insufficient in simulation."); return; }
+  state.clientBalance -= total;
+  state.vaultBalance = total;
+  state.created = true;
+  logEvent("VaultCreated · locked " + total + " tTARI · policy = " +
+    (state.policy === "auto" ? "AutoReleaseIfSubmitted" : "RefundClient"));
+}
+
+function submit(i){
+  const m = state.milestones[i];
+  if (m.status !== PENDING) return;
+  if (state.epoch > m.deadline) { alert("Template would reject: milestone deadline has passed."); return; }
+  const note = prompt("Delivery note for milestone " + (i+1) + " (stored on-chain by the template):",
+                      "Delivered: see attached work product");
+  if (note === null) return;
+  m.status = SUBMITTED; m.note = note;
+  logEvent("MilestoneSubmitted · #" + (i+1) + " · note: " + note);
+}
+
+function approve(i){
+  const m = state.milestones[i];
+  if (m.status !== SUBMITTED) return;
+  m.status = RELEASED;
+  state.vaultBalance -= m.amount;
+  state.freelancerBalance += m.amount;
+  logEvent("MilestoneReleased · #" + (i+1) + " · " + m.amount + " tTARI → freelancer · auto=false");
+}
+
+function settle(i){
+  const m = state.milestones[i];
+  if (m.status === RELEASED || m.status === REFUNDED) return;
+  if (state.epoch <= m.deadline) { alert("Template would reject: milestone deadline has not passed yet."); return; }
+  const wasSubmitted = m.status === SUBMITTED;
+  const payFreelancer = wasSubmitted && state.policy === "auto";
+  state.vaultBalance -= m.amount;
+  if (payFreelancer){
+    m.status = RELEASED; state.freelancerBalance += m.amount;
+    logEvent("MilestoneReleased · #" + (i+1) + " · " + m.amount + " tTARI → freelancer · auto=true (submitted in time, client silent past deadline)");
+  } else {
+    m.status = REFUNDED; state.clientBalance += m.amount;
+    logEvent("MilestoneRefunded · #" + (i+1) + " · " + m.amount + " tTARI → client · was_submitted=" + wasSubmitted);
+  }
+}
+
+// ---- Rendering ----
+function render(){
+  document.getElementById("epoch-label").textContent = state.epoch;
+  document.getElementById("bal-client").textContent = state.clientBalance;
+  document.getElementById("bal-freelancer").textContent = state.freelancerBalance;
+  document.getElementById("bal-vault").textContent = state.vaultBalance;
+  document.getElementById("btn-create").disabled = state.created;
+  document.getElementById("policy").disabled = state.created;
+  document.getElementById("total-label").textContent =
+    state.milestones.reduce((s,m)=>s+m.amount,0);
+
+  document.getElementById("role-client").className = role==="client" ? "role-on" : "";
+  document.getElementById("role-freelancer").className = role==="freelancer" ? "role-on" : "";
+  document.getElementById("role-hint").textContent = !state.created
+    ? "Create the vault first — setup is the client's step."
+    : role === "client"
+      ? "As the client you can approve submitted milestones (only the client's key can, on-chain). You cannot submit — that is the freelancer's key only."
+      : "As the freelancer you can submit milestones (only the freelancer's key can, on-chain). You cannot approve your own work — approval is the client's key only. Anyone may settle an expired milestone; the outcome is fixed by the locked policy.";
+
+  const body = document.getElementById("ms-body");
+  body.innerHTML = "";
+  state.milestones.forEach((m,i)=>{
+    const tr = document.createElement("tr");
+    let action = "";
+    if (state.created){
+      if (m.status === PENDING)
+        action = '<button data-act="submit" data-i="'+i+'" '+(role==="freelancer"?"":"disabled")+'>Submit delivery</button>';
+      else if (m.status === SUBMITTED)
+        action = '<button data-act="approve" data-i="'+i+'" '+(role==="client"?"":"disabled")+'>Approve &amp; release</button>' +
+                 (state.epoch > m.deadline ? ' <button data-act="settle" data-i="'+i+'">Settle expired</button>' : '');
+      else if (m.status === PENDING || m.status === SUBMITTED)
+        action = '';
+      if ((m.status === PENDING) && state.epoch > m.deadline)
+        action += ' <button data-act="settle" data-i="'+i+'">Settle expired</button>';
+    }
+    tr.innerHTML = "<td>"+(i+1)+"</td><td>"+m.description+"<br><span class='dim'>"+m.amount+" tTARI · deadline epoch "+m.deadline+(m.note?" · note: "+m.note:"")+"</span></td>"+
+      "<td><span class='chip st"+m.status+"'>"+STATUS[m.status]+"</span></td><td>"+action+"</td>";
+    body.appendChild(tr);
+  });
+
+  document.getElementById("log").textContent = state.log.slice().reverse().join("\n") || "(no events yet)";
+  document.querySelectorAll("[data-act]").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      const i = +b.dataset.i;
+      if (b.dataset.act==="submit") submit(i);
+      if (b.dataset.act==="approve") approve(i);
+      if (b.dataset.act==="settle") settle(i);
+    });
+  });
+}
+
+function renderSetup(){
+  const tb = document.querySelector("#ms-setup tbody");
+  tb.innerHTML = "";
+  DEFAULT_MILESTONES.forEach((m,i)=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = "<td>"+(i+1)+"</td><td>"+m.description+"</td><td>"+m.amount+"</td><td>"+m.deadline+"</td>";
+    tb.appendChild(tr);
+  });
+}
+
+document.getElementById("btn-create").addEventListener("click", createVault);
+document.getElementById("btn-reset").addEventListener("click", ()=>{ state = freshState(); logEvent("Demo reset."); });
+document.getElementById("btn-epoch1").addEventListener("click", ()=>{ state.epoch += 1; render(); });
+document.getElementById("btn-epoch-jump").addEventListener("click", ()=>{
+  state.epoch = Math.max(...state.milestones.map(m=>m.deadline)) + 1; render();
+});
+document.getElementById("role-client").addEventListener("click", ()=>{ role="client"; render(); });
+document.getElementById("role-freelancer").addEventListener("click", ()=>{ role="freelancer"; render(); });
+document.getElementById("policy").addEventListener("change", ()=>{ if(!state.created){ state.policy = document.getElementById("policy").value; } });
+
+state = freshState();
+renderSetup();
+render();
+</script>
+</body>
+</html>
