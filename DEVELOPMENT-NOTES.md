@@ -1,5 +1,18 @@
 # Development notes — Milestone Vault, phase 1 (2026-11-08)
 
+## Rebuild on Ootle 0.53 toolchain (2026-11-12)
+
+Ootle mainnet launched on schedule 2026-11-11; toolchain jumped (see
+launch-check evidence in the goal's hidden_files). Rebuilt with exact pins:
+`tari_template_lib` =0.40.1, `tari_template_test_tooling` =0.53.3,
+`tari_ootle_template_build` =0.20.0 (all verified as latest on crates.io,
+2026-11-11). No template source changes needed — no removed `Amount`
+methods (`is_negative` / `non_negative_checked` / `negative_checked`) were
+used. Engine tests 9/9 green on the new toolchain. walletd upgraded to
+v0.53.0 (official tari-ootle release, SHA256 `a12bad93…` verified against
+both the per-asset `.sha256` file and the release manifest);
+`./tari_ootle_walletd --version` → `tari_ootle_walletd 0.53.0`.
+
 Local development only: no accounts registered, nothing posted, no wallet
 generated, nothing pushed anywhere.
 

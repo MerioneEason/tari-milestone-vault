@@ -107,8 +107,10 @@ Engine tests (run with `cargo test` in `template/`) cover:
 - settling before the deadline is rejected;
 - approving before submission is rejected.
 
-_Status (2026-11-08): **9/9 engine tests pass** against `tari_template_lib`
-0.38 / `tari_template_test_tooling` 0.50. The template also compiles to WASM
+_Status (2026-11-12): **9/9 engine tests pass** against `tari_template_lib`
+0.40.1 / `tari_template_test_tooling` 0.53.3 (rebuilt 2026-11-12 after the
+Ootle mainnet launch; previous baseline was lib 0.38 / test_tooling 0.50).
+The template also compiles to WASM
 (`wasm32-unknown-unknown`, release). It has not been published to any network
 yet._
 
@@ -151,10 +153,11 @@ cargo test                                        # engine tests (in-process)
 cargo build --target wasm32-unknown-unknown --release   # template WASM
 ```
 
-Development baseline (recorded 2026-11-08): Rust stable 1.99.1,
-`tari_template_lib` 0.38, `tari_template_test_tooling` 0.50,
-`tari_ootle_template_build` 0.18 — the latest crates.io releases at the time
-of writing, matching the tari-ootle workspace version 0.50.1. Because the
+Development baseline (rebuilt 2026-11-12): Rust stable 1.99.1,
+`tari_template_lib` 0.40.1, `tari_template_test_tooling` 0.53.3,
+`tari_ootle_template_build` 0.20.0 — the latest crates.io releases at the time
+of the rebuild, matching the tari-ootle workspace version 0.53.0 (walletd
+v0.53.0). Because the
 Ootle toolchain moves fast (templates built against old library versions
 cannot load after protocol V1 activation), the template will be rebuilt and
 re-tested against the then-latest versions in the final week before the
